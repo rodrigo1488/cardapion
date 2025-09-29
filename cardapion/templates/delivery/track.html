@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}Acompanhar Pedido - {{ company_name }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50" x-data="trackOrder()">
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="px-4 py-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-primary rounded-lg w-10 h-10 flex items-center justify-center">
+                    <i class="fas fa-utensils text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-gray-800">Acompanhar Pedido</h1>
+                    <p class="text-sm text-gray-600">{{ company_name }}</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="px-4 py-4">
+        <!-- Informações do Pedido -->
+        <div class="bg-white rounded-xl shadow-neumorphism p-4 mb-4">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="font-semibold text-gray-800">Pedido #<span x-text="orderData.id ? orderData.id.substring(0, 8) : '...'"></span></h2>
+                <span class="px-3 py-1 rounded-full text-sm font-medium"
+                      :class="getStatusClass(orderData.status)"
+                      x-text="getStatusText(orderData.status)">
+                </span>
+            </div>
+            <div class="text-sm text-gray-600">
+                <p>Total: <span class="font-semibold text-gray-800" x-text="'R$ ' + (orderData.total / 100).toFixed(2)"></span></p>
+                <p>Pedido realizado em: <span x-text="formatDate(orderData.created_at)"></span></p>
+            </div>
+        </div>
+
+        <!-- Status do Pedido -->
+        <div class="bg-white rounded-xl shadow-neumorphism p-4 mb-4">
+            <h2 class="font-semibold text-gray-800 mb-4">Status do Pedido</h2>
+            <div class="space-y-4">
+                <!-- Recebido -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center"
+                         :class="getStepClass('recebido')">
+                        <i class="fas fa-check text-white text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-800">Pedido Recebido</p>
+                        <p class="text-sm text-gray-600">Seu pedido foi confirmado</p>
+                    </div>
+                </div>
+
+                <!-- Preparando -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center"
+                         :class="getStepClass('preparando')">
+                        <i :class="getStepIcon('preparando')" class="text-white text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-800">Preparando</p>
+                        <p class="text-sm text-gray-600">Seu pedido está sendo preparado</p>
+                        <div x-show="orderData.status === 'preparando'" class="mt-2">
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full transition-all duration-1000" 
+                                     :style="'width: ' + getPreparationProgress() + '%'"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1" x-text="getPreparationTime()"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Saiu para Entrega -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center"
+                         :class="getStepClass('saiu_entrega')">
+                        <i :class="getStepIcon('saiu_entrega')" class="text-white text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-800">Saiu para Entrega</p>
+                        <p class="text-sm text-gray-600">Seu pedido está a caminho</p>
+                    </div>
+                </div>
+
+                <!-- Entregue -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center"
+                         :class="getStepClass('entregue')">
+                        <i :class="getStepIcon('entregue')" class="text-white text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-800">Entregue</p>
+                        <p class="text-sm text-gray-600">Pedido entregue com sucesso!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Itens do Pedido -->
+        <div class="bg-white rounded-xl shadow-neumorphism p-4 mb-4">
+            <h2 class="font-semibold text-gray-800 mb-3">Itens do Pedido</h2>
+            <div class="space-y-2">
+                <template x-for="item in orderData.items" :key="item.id">
+                    <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                        <div class="flex items-center space-x-3">
+                            <span x-text="item.quantity" class="bg-primary text-white text-xs rounded-full w-6 h-6 flex items-center justify-center"></span>
+                            <span class="text-gray-700" x-text="item.name"></span>
+                        </div>
+                        <span class="font-medium text-gray-800" x-text="'R$ ' + (item.price * item.quantity / 100).toFixed(2)"></span>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Informações de Entrega -->
+        <div class="bg-white rounded-xl shadow-neumorphism p-4 mb-4">
+            <h2 class="font-semibold text-gray-800 mb-3">Informações de Entrega</h2>
+            <div class="space-y-2 text-sm">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-user text-gray-500 w-4"></i>
+                    <span x-text="orderData.client.name"></span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-phone text-gray-500 w-4"></i>
+                    <span x-text="orderData.client.phone"></span>
+                </div>
+                <div class="flex items-start space-x-2">
+                    <i class="fas fa-map-marker-alt text-gray-500 w-4 mt-1"></i>
+                    <div>
+                        <div x-text="orderData.client.address"></div>
+                        <div x-show="orderData.client.address2" x-text="orderData.client.address2" class="text-gray-600"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tempo Estimado -->
+        <div x-show="orderData.status !== 'entregue'" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-clock text-blue-600"></i>
+                <span class="text-sm font-medium text-blue-800">Tempo estimado restante:</span>
+            </div>
+            <p class="text-sm text-blue-700 mt-1" x-text="getEstimatedTime()"></p>
+        </div>
+
+        <!-- Botão de Novo Pedido -->
+        <div x-show="orderData.status === 'entregue'" class="text-center">
+            <button @click="newOrder" 
+                    class="bg-primary text-white py-3 px-6 rounded-lg font-medium hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-300">
+                Fazer Novo Pedido
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function trackOrder() {
+    return {
+        orderData: {},
+        companyId: '',
+        orderId: '',
+        statusOrder: ['recebido', 'preparando', 'saiu_entrega', 'entregue'],
+        preparationStartTime: null,
+        preparationDuration: 20, // minutos
+
+        async init() {
+            // Extrair companyId e orderId da URL
+            const pathParts = window.location.pathname.split('/');
+            this.companyId = pathParts[2];
+            this.orderId = pathParts[4];
+
+            if (!this.companyId || !this.orderId) {
+                window.location.href = '/';
+                return;
+            }
+
+            await this.loadOrderData();
+            this.startPolling();
+        },
+
+        async loadOrderData() {
+            try {
+                const response = await fetch(`/api/orders/${this.orderId}/track`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    this.orderData = data.order;
+                    if (this.orderData.status === 'preparando' && !this.preparationStartTime) {
+                        this.preparationStartTime = new Date(this.orderData.updated_at || this.orderData.created_at);
+                    }
+                } else {
+                    console.error('Erro ao carregar pedido:', data.error);
+                }
+            } catch (error) {
+                console.error('Erro ao carregar pedido:', error);
+            }
+        },
+
+        startPolling() {
+            // Atualizar status a cada 30 segundos
+            setInterval(() => {
+                this.loadOrderData();
+            }, 30000);
+        },
+
+        getStatusClass(status) {
+            const classes = {
+                'recebido': 'bg-blue-100 text-blue-800',
+                'preparando': 'bg-yellow-100 text-yellow-800',
+                'saiu_entrega': 'bg-purple-100 text-purple-800',
+                'entregue': 'bg-green-100 text-green-800'
+            };
+            return classes[status] || 'bg-gray-100 text-gray-800';
+        },
+
+        getStatusText(status) {
+            const texts = {
+                'recebido': 'Recebido',
+                'preparando': 'Preparando',
+                'saiu_entrega': 'Saiu para Entrega',
+                'entregue': 'Entregue'
+            };
+            return texts[status] || 'Desconhecido';
+        },
+
+        getStepClass(step) {
+            const currentIndex = this.statusOrder.indexOf(this.orderData.status);
+            const stepIndex = this.statusOrder.indexOf(step);
+            
+            if (stepIndex <= currentIndex) {
+                return 'bg-primary';
+            } else {
+                return 'bg-gray-300';
+            }
+        },
+
+        getStepIcon(step) {
+            const currentIndex = this.statusOrder.indexOf(this.orderData.status);
+            const stepIndex = this.statusOrder.indexOf(step);
+            
+            if (stepIndex < currentIndex) {
+                return 'fas fa-check';
+            } else if (stepIndex === currentIndex) {
+                return step === 'preparando' ? 'fas fa-spinner fa-spin' : 'fas fa-check';
+            } else {
+                return 'fas fa-clock';
+            }
+        },
+
+        getPreparationProgress() {
+            if (this.orderData.status !== 'preparando' || !this.preparationStartTime) {
+                return 0;
+            }
+
+            const now = new Date();
+            const elapsed = (now - this.preparationStartTime) / (1000 * 60); // minutos
+            const progress = Math.min((elapsed / this.preparationDuration) * 100, 100);
+            
+            return Math.round(progress);
+        },
+
+        getPreparationTime() {
+            if (this.orderData.status !== 'preparando' || !this.preparationStartTime) {
+                return '';
+            }
+
+            const now = new Date();
+            const elapsed = (now - this.preparationStartTime) / (1000 * 60); // minutos
+            const remaining = Math.max(this.preparationDuration - elapsed, 0);
+            
+            return `Tempo restante: ${Math.round(remaining)} minutos`;
+        },
+
+        getEstimatedTime() {
+            const status = this.orderData.status;
+            const times = {
+                'recebido': '30-45 minutos',
+                'preparando': this.getPreparationTime() || '20-30 minutos',
+                'saiu_entrega': '10-15 minutos',
+                'entregue': 'Entregue!'
+            };
+            return times[status] || 'Calculando...';
+        },
+
+        formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleString('pt-BR');
+        },
+
+        newOrder() {
+            window.location.href = `/delivery/${this.companyId}/menu`;
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,449 @@
+{% extends "base_dashboard.html" %}
+
+{% block page_title %}Configurações{% endblock %}
+{% block header_title %}Configurações{% endblock %}
+
+{% block main_content %}
+<div class="space-y-6">
+    <!-- URL de Acesso para Delivery -->
+    <div class="bg-white shadow-neumorphism rounded-xl p-6">
+        <div class="flex items-center space-x-3 mb-4">
+            <div class="bg-primary rounded-full w-10 h-10 flex items-center justify-center">
+                <i class="fas fa-link text-white"></i>
+            </div>
+            <div>
+                <h2 class="text-lg font-semibold text-gray-800">Link de Acesso para Delivery</h2>
+                <p class="text-sm text-gray-600">Compartilhe este link com seus clientes para pedidos delivery</p>
+            </div>
+        </div>
+        
+        <div class="bg-gray-50 rounded-lg p-4 mb-4">
+            <div class="flex items-center justify-between">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        URL do Cardápio Delivery
+                    </label>
+                    <div class="flex items-center space-x-2">
+                        <input 
+                            type="text" 
+                            :value="deliveryUrl" 
+                            readonly
+                            class="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-mono"
+                            id="delivery-url"
+                        >
+                        <button 
+                            @click="copyUrl"
+                            class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-sm font-medium">
+                            <i class="fas fa-copy mr-2"></i>
+                            Copiar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-start space-x-3">
+                <i class="fas fa-info-circle text-blue-600 mt-1"></i>
+                <div class="text-sm text-blue-700">
+                    <p class="font-medium mb-1">Como usar:</p>
+                    <ul class="list-disc list-inside space-y-1">
+                        <li>Compartilhe este link nas redes sociais da sua empresa</li>
+                        <li>Adicione um QR Code em cardápios físicos</li>
+                        <li>Inclua no site da sua empresa</li>
+                        <li>Envie por WhatsApp para clientes</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configurações da Empresa -->
+    <div class="bg-white shadow-neumorphism rounded-xl p-6">
+        <div class="flex items-center space-x-3 mb-4">
+            <div class="bg-green-500 rounded-full w-10 h-10 flex items-center justify-center">
+                <i class="fas fa-building text-white"></i>
+            </div>
+            <div>
+                <h2 class="text-lg font-semibold text-gray-800">Dados da Empresa</h2>
+                <p class="text-sm text-gray-600">Informações básicas da sua empresa</p>
+            </div>
+        </div>
+
+        <form @submit.prevent="updateCompany" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="company-name" class="block text-sm font-medium text-gray-700 mb-2">
+                        Nome da Empresa *
+                    </label>
+                    <input 
+                        type="text" 
+                        id="company-name" 
+                        x-model="companyForm.name"
+                        class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                        required
+                    >
+                </div>
+
+                <div>
+                    <label for="company-email" class="block text-sm font-medium text-gray-700 mb-2">
+                        Email *
+                    </label>
+                    <input 
+                        type="email" 
+                        id="company-email" 
+                        x-model="companyForm.email"
+                        class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                        required
+                    >
+                </div>
+
+                <div>
+                    <label for="company-phone" class="block text-sm font-medium text-gray-700 mb-2">
+                        Telefone *
+                    </label>
+                    <input 
+                        type="tel" 
+                        id="company-phone" 
+                        x-model="companyForm.contact"
+                        @input="formatPhone"
+                        class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                        required
+                    >
+                </div>
+
+                <div>
+                    <label for="company-cnpj" class="block text-sm font-medium text-gray-700 mb-2">
+                        CNPJ *
+                    </label>
+                    <input 
+                        type="text" 
+                        id="company-cnpj" 
+                        x-model="companyForm.cnpj"
+                        @input="formatCNPJ"
+                        class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                        required
+                    >
+                </div>
+            </div>
+
+            <div>
+                <label for="company-address" class="block text-sm font-medium text-gray-700 mb-2">
+                    Endereço Completo *
+                </label>
+                <textarea 
+                    id="company-address" 
+                    x-model="companyForm.address"
+                    rows="3"
+                    class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300 resize-none"
+                    required
+                ></textarea>
+            </div>
+
+            <div class="flex justify-end">
+                <button 
+                    type="submit" 
+                    :disabled="loading"
+                    class="bg-primary text-white py-3 px-6 rounded-lg font-medium hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <span x-show="!loading">Salvar Alterações</span>
+                    <span x-show="loading" class="flex items-center">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>
+                        Salvando...
+                    </span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Formas de Pagamento -->
+    <div class="bg-white shadow-neumorphism rounded-xl p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-purple-500 rounded-full w-10 h-10 flex items-center justify-center">
+                    <i class="fas fa-credit-card text-white"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800">Formas de Pagamento</h2>
+                    <p class="text-sm text-gray-600">Configure as formas de pagamento aceitas</p>
+                </div>
+            </div>
+            <button @click="showAddPayment = true" 
+                    class="bg-primary text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-primary-hover transition-colors">
+                <i class="fas fa-plus mr-2"></i>
+                Adicionar
+            </button>
+        </div>
+
+        <div class="space-y-3">
+            <template x-for="payment in paymentMethods" :key="payment.id">
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                            <i :class="payment.icon" class="text-gray-600"></i>
+                        </div>
+                        <span class="font-medium text-gray-800" x-text="payment.name"></span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button @click="editPayment(payment)" 
+                                class="text-gray-500 hover:text-gray-700 p-1">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button @click="deletePayment(payment.id)" 
+                                class="text-red-500 hover:text-red-700 p-1">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Modal Adicionar Forma de Pagamento -->
+    <div x-show="showAddPayment" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" 
+         @click.self="showAddPayment = false"
+         x-cloak>
+        <div class="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Adicionar Forma de Pagamento</h3>
+                <button @click="showAddPayment = false" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form @submit.prevent="addPayment" class="space-y-4">
+                <div>
+                    <label for="payment-name" class="block text-sm font-medium text-gray-700 mb-2">
+                        Nome *
+                    </label>
+                    <input 
+                        type="text" 
+                        id="payment-name" 
+                        x-model="newPayment.name"
+                        class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                        placeholder="Ex: PIX, Dinheiro, Cartão"
+                        required
+                    >
+                </div>
+
+                <div class="flex justify-end space-x-3">
+                    <button type="button" @click="showAddPayment = false"
+                            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" 
+                            class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors">
+                        Adicionar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Mensagens de Erro/Sucesso -->
+    <div x-show="message" x-transition class="fixed top-4 right-4 z-50">
+        <div class="max-w-md p-3 rounded-lg" :class="messageType === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'">
+            <span x-text="message"></span>
+        </div>
+    </div>
+</div>
+
+<script>
+function settingsPage() {
+    return {
+        deliveryUrl: '',
+        companyForm: {
+            name: '',
+            email: '',
+            contact: '',
+            cnpj: '',
+            address: ''
+        },
+        paymentMethods: [],
+        newPayment: {
+            name: '',
+            icon: 'fas fa-credit-card'
+        },
+        showAddPayment: false,
+        loading: false,
+        message: '',
+        messageType: 'error',
+
+        async init() {
+            this.deliveryUrl = `http://192.168.2.110:5000/delivery/${this.getCompanyId()}/menu`;
+            await this.loadCompanyData();
+            await this.loadPaymentMethods();
+        },
+
+        getCompanyId() {
+            // Em produção, pegar do contexto da sessão
+            return '{{ company_id }}' || 'test-company-id';
+        },
+
+        async loadCompanyData() {
+            try {
+                const response = await fetch(`/api/company/${this.getCompanyId()}`);
+                const data = await response.json();
+                
+                if (response.ok && data.company) {
+                    this.companyForm = {
+                        name: data.company.name || '',
+                        email: data.company.email || '',
+                        contact: data.company.contact || '',
+                        cnpj: data.company.cnpj || '',
+                        address: data.company.adress || ''
+                    };
+                }
+            } catch (error) {
+                console.error('Erro ao carregar dados da empresa:', error);
+            }
+        },
+
+        async loadPaymentMethods() {
+            try {
+                const response = await fetch(`/api/company/${this.getCompanyId()}/payments`);
+                const data = await response.json();
+                this.paymentMethods = data.payments || [];
+            } catch (error) {
+                console.error('Erro ao carregar formas de pagamento:', error);
+            }
+        },
+
+        formatPhone(event) {
+            let value = event.target.value.replace(/\D/g, '');
+            if (value.length <= 10) {
+                value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+                value = value.replace(/(\d{4})(\d)/, '$1-$2');
+            } else {
+                value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+                value = value.replace(/(\d{5})(\d)/, '$1-$2');
+            }
+            this.companyForm.contact = value;
+        },
+
+        formatCNPJ(event) {
+            let value = event.target.value.replace(/\D/g, '');
+            value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+            value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+            value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+            value = value.replace(/(\d{4})(\d)/, '$1-$2');
+            this.companyForm.cnpj = value;
+        },
+
+        async copyUrl() {
+            try {
+                await navigator.clipboard.writeText(this.deliveryUrl);
+                this.message = 'URL copiada para a área de transferência!';
+                this.messageType = 'success';
+                setTimeout(() => this.message = '', 3000);
+            } catch (error) {
+                // Fallback para navegadores mais antigos
+                const input = document.getElementById('delivery-url');
+                input.select();
+                document.execCommand('copy');
+                this.message = 'URL copiada para a área de transferência!';
+                this.messageType = 'success';
+                setTimeout(() => this.message = '', 3000);
+            }
+        },
+
+        async updateCompany() {
+            this.loading = true;
+            this.message = '';
+
+            try {
+                const response = await fetch(`/api/company/${this.getCompanyId()}/update`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(this.companyForm)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    this.message = 'Dados da empresa atualizados com sucesso!';
+                    this.messageType = 'success';
+                } else {
+                    this.message = data.error || 'Erro ao atualizar dados';
+                    this.messageType = 'error';
+                }
+            } catch (error) {
+                this.message = 'Erro de conexão. Tente novamente.';
+                this.messageType = 'error';
+            } finally {
+                this.loading = false;
+                setTimeout(() => this.message = '', 5000);
+            }
+        },
+
+        async addPayment() {
+            try {
+                const response = await fetch(`/api/company/${this.getCompanyId()}/payments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(this.newPayment)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    this.paymentMethods.push(data.payment);
+                    this.newPayment = { name: '', icon: 'fas fa-credit-card' };
+                    this.showAddPayment = false;
+                    this.message = 'Forma de pagamento adicionada!';
+                    this.messageType = 'success';
+                } else {
+                    this.message = data.error || 'Erro ao adicionar forma de pagamento';
+                    this.messageType = 'error';
+                }
+            } catch (error) {
+                this.message = 'Erro de conexão. Tente novamente.';
+                this.messageType = 'error';
+            }
+            setTimeout(() => this.message = '', 3000);
+        },
+
+        editPayment(payment) {
+            // Implementar edição
+            console.log('Editar pagamento:', payment);
+        },
+
+        async deletePayment(paymentId) {
+            if (!confirm('Tem certeza que deseja excluir esta forma de pagamento?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/company/${this.getCompanyId()}/payments/${paymentId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    this.paymentMethods = this.paymentMethods.filter(p => p.id !== paymentId);
+                    this.message = 'Forma de pagamento excluída!';
+                    this.messageType = 'success';
+                } else {
+                    this.message = 'Erro ao excluir forma de pagamento';
+                    this.messageType = 'error';
+                }
+            } catch (error) {
+                this.message = 'Erro de conexão. Tente novamente.';
+                this.messageType = 'error';
+            }
+            setTimeout(() => this.message = '', 3000);
+        }
+    }
+}
+</script>
+{% endblock %}

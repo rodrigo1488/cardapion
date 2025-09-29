@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Confirmar Pedido - {{ company_name }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50" x-data="confirmationForm()">
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="px-4 py-3">
+            <div class="flex items-center space-x-3">
+                <button @click="goBack" class="text-gray-600 hover:text-gray-800">
+                    <i class="fas fa-arrow-left text-xl"></i>
+                </button>
+                <div>
+                    <h1 class="text-lg font-bold text-gray-800">Confirmar Pedido</h1>
+                    <p class="text-sm text-gray-600">{{ company_name }}</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="px-4 py-4">
+        <!-- Dados do Cliente -->
+        <div class="bg-white rounded-xl shadow-neumorphism p-4 mb-4">
+            <h2 class="font-semibold text-gray-800 mb-3">Dados para Entrega</h2>
+            <div class="space-y-2 text-sm">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-user text-gray-500 w-4"></i>
+                    <span x-text="clientData.name"></span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-phone text-gray-500 w-4"></i>
+                    <span x-text="clientData.phone"></span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-envelope text-gray-500 w-4"></i>
+                    <span x-text="clientData.email"></span>
+                </div>
+                <div class="flex items-start space-x-2">
+                    <i class="fas fa-map-marker-alt text-gray-500 w-4 mt-1"></i>
+                    <div>
+                        <div x-text="clientData.address"></div>
+                        <div x-show="clientData.address2" x-text="clientData.address2" class="text-gray-600"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumo do Pedido -->
+        <div class="bg-white rounded-xl shadow-neumorphism p-4 mb-4">
+            <h2 class="font-semibold text-gray-800 mb-3">Resumo do Pedido</h2>
+            <div class="space-y-3">
+                <template x-for="item in cartItems" :key="item.id">
+                    <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                        <div class="flex items-center space-x-3">
+                            <span x-text="item.quantity" class="bg-primary text-white text-xs rounded-full w-6 h-6 flex items-center justify-center"></span>
+                            <div>
+                                <p class="font-medium text-gray-800" x-text="item.name"></p>
+                                <p class="text-sm text-gray-600" x-text="'R$ ' + (item.price / 100).toFixed(2) + ' cada'"></p>
+                            </div>
+                        </div>
+                        <span class="font-semibold text-gray-800" x-text="'R$ ' + (item.price * item.quantity / 100).toFixed(2)"></span>
+                    </div>
+                </template>
+            </div>
+            <div class="border-t border-gray-200 mt-3 pt-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-lg font-semibold text-gray-800">Total:</span>
+                    <span class="text-2xl font-bold text-primary" x-text="'R$ ' + (getTotalPrice() / 100).toFixed(2)"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formas de Pagamento -->
+        <div class="bg-white rounded-xl shadow-neumorphism p-4 mb-4">
+            <h2 class="font-semibold text-gray-800 mb-3">Forma de Pagamento</h2>
+            <div class="space-y-3">
+                <template x-for="payment in paymentMethods" :key="payment.id">
+                    <label class="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                           :class="selectedPayment === payment.id ? 'border-primary bg-primary-50' : ''">
+                        <input 
+                            type="radio" 
+                            :value="payment.id" 
+                            x-model="selectedPayment"
+                            class="sr-only"
+                        >
+                        <div class="flex items-center space-x-3 flex-1">
+                            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                                <i :class="payment.icon" class="text-gray-600"></i>
+                            </div>
+                            <span class="font-medium text-gray-800" x-text="payment.name"></span>
+                        </div>
+                        <div class="w-4 h-4 border-2 rounded-full flex items-center justify-center"
+                             :class="selectedPayment === payment.id ? 'border-primary bg-primary' : 'border-gray-300'">
+                            <div x-show="selectedPayment === payment.id" class="w-2 h-2 bg-white rounded-full"></div>
+                        </div>
+                    </label>
+                </template>
+            </div>
+        </div>
+
+        <!-- Tempo Estimado -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-clock text-blue-600"></i>
+                <span class="text-sm font-medium text-blue-800">Tempo estimado de entrega:</span>
+            </div>
+            <p class="text-sm text-blue-700 mt-1" x-text="'30-45 minutos'"></p>
+        </div>
+
+        <!-- Botão de Confirmar -->
+        <button @click="confirmOrder" 
+                :disabled="!selectedPayment || loading"
+                class="w-full bg-primary text-white py-4 px-4 rounded-lg font-medium hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+            <span x-show="!loading">Confirmar Pedido</span>
+            <span x-show="loading" class="flex items-center justify-center">
+                <i class="fas fa-spinner fa-spin mr-2"></i>
+                Processando...
+            </span>
+        </button>
+    </div>
+
+    <!-- Mensagens de Erro/Sucesso -->
+    <div x-show="message" x-transition class="fixed top-4 left-4 right-4 z-50">
+        <div class="max-w-md mx-auto p-3 rounded-lg" :class="messageType === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'">
+            <span x-text="message"></span>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmationForm() {
+    return {
+        cartItems: [],
+        clientData: {},
+        companyId: '',
+        paymentMethods: [],
+        selectedPayment: null,
+        loading: false,
+        message: '',
+        messageType: 'error',
+
+        async init() {
+            // Carregar dados do carrinho e cliente
+            const cartData = sessionStorage.getItem('delivery_cart');
+            const clientData = sessionStorage.getItem('delivery_client');
+            const companyId = sessionStorage.getItem('delivery_company_id');
+            
+            if (!cartData || !clientData || !companyId) {
+                this.message = 'Erro: Dados não encontrados';
+                this.messageType = 'error';
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+                return;
+            }
+
+            this.cartItems = JSON.parse(cartData);
+            this.clientData = JSON.parse(clientData);
+            this.companyId = companyId;
+
+            await this.loadPaymentMethods();
+        },
+
+        async loadPaymentMethods() {
+            try {
+                const response = await fetch(`/api/company/${this.companyId}/payments`);
+                const data = await response.json();
+                this.paymentMethods = data.payments || [
+                    { id: 'pix', name: 'PIX', icon: 'fas fa-qrcode' },
+                    { id: 'dinheiro', name: 'Dinheiro', icon: 'fas fa-money-bill' },
+                    { id: 'cartao', name: 'Cartão', icon: 'fas fa-credit-card' }
+                ];
+            } catch (error) {
+                console.error('Erro ao carregar formas de pagamento:', error);
+                // Usar métodos padrão
+                this.paymentMethods = [
+                    { id: 'pix', name: 'PIX', icon: 'fas fa-qrcode' },
+                    { id: 'dinheiro', name: 'Dinheiro', icon: 'fas fa-money-bill' },
+                    { id: 'cartao', name: 'Cartão', icon: 'fas fa-credit-card' }
+                ];
+            }
+        },
+
+        getTotalPrice() {
+            return this.cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+        },
+
+        async confirmOrder() {
+            if (!this.selectedPayment) {
+                this.message = 'Selecione uma forma de pagamento';
+                this.messageType = 'error';
+                return;
+            }
+
+            this.loading = true;
+            this.message = '';
+
+            try {
+                const orderData = {
+                    company_id: this.companyId,
+                    client: this.clientData,
+                    items: this.cartItems,
+                    payment_method: this.selectedPayment,
+                    total: this.getTotalPrice(),
+                    is_delivery: true
+                };
+
+                const response = await fetch('/api/orders/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(orderData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Limpar dados do carrinho
+                    sessionStorage.removeItem('delivery_cart');
+                    sessionStorage.removeItem('delivery_client');
+                    sessionStorage.removeItem('delivery_company_id');
+                    
+                    // Redirecionar para acompanhamento
+                    window.location.href = `/delivery/${this.companyId}/track/${data.order_id}`;
+                } else {
+                    this.message = data.error || 'Erro ao processar pedido';
+                    this.messageType = 'error';
+                }
+            } catch (error) {
+                this.message = 'Erro de conexão. Tente novamente.';
+                this.messageType = 'error';
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        goBack() {
+            window.location.href = `/delivery/${this.companyId}/checkout`;
+        }
+    }
+}
+</script>
+{% endblock %}

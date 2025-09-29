@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Cardápio Digital{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    boxShadow: {
+                        'neumorphism': '8px 8px 16px #d1d9e6, -8px -8px 16px #ffffff',
+                        'neumorphism-hover': '4px 4px 8px #d1d9e6, -4px -4px 8px #ffffff',
+                    },
+                    colors: {
+                        primary: '#F97316',
+                        'primary-hover': '#EA580C',
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen">
+    {% block content %}{% endblock %}
+    
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

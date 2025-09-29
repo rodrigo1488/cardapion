@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block title %}Finalizar Pedido - {{ company_name }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50" x-data="checkoutForm()">
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="px-4 py-3">
+            <div class="flex items-center space-x-3">
+                <button @click="goBack" class="text-gray-600 hover:text-gray-800">
+                    <i class="fas fa-arrow-left text-xl"></i>
+                </button>
+                <div>
+                    <h1 class="text-lg font-bold text-gray-800">Finalizar Pedido</h1>
+                    <p class="text-sm text-gray-600">{{ company_name }}</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Resumo do Pedido -->
+    <div class="px-4 py-4">
+        <div class="bg-white rounded-xl shadow-neumorphism p-4 mb-4">
+            <h2 class="font-semibold text-gray-800 mb-3">Resumo do Pedido</h2>
+            <div class="space-y-2">
+                <template x-for="item in cartItems" :key="item.id">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span x-text="item.quantity" class="bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"></span>
+                            <span class="text-gray-700" x-text="item.name"></span>
+                        </div>
+                        <span class="font-medium text-gray-800" x-text="'R$ ' + (item.price * item.quantity / 100).toFixed(2)"></span>
+                    </div>
+                </template>
+            </div>
+            <div class="border-t border-gray-200 mt-3 pt-3">
+                <div class="flex items-center justify-between">
+                    <span class="font-semibold text-gray-800">Total:</span>
+                    <span class="text-xl font-bold text-primary" x-text="'R$ ' + (getTotalPrice() / 100).toFixed(2)"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulário de Email -->
+        <div class="bg-white rounded-xl shadow-neumorphism p-4 mb-4">
+            <h2 class="font-semibold text-gray-800 mb-3">Informações de Contato</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                        Email *
+                    </label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        x-model="form.email"
+                        @blur="checkExistingClient"
+                        class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                        placeholder="seu@email.com"
+                        required
+                    >
+                </div>
+                
+                <!-- Dados do Cliente Existente -->
+                <div x-show="existingClient" x-transition class="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div class="flex items-center space-x-2 mb-2">
+                        <i class="fas fa-check-circle text-green-600"></i>
+                        <span class="text-sm font-medium text-green-800">Cliente encontrado!</span>
+                    </div>
+                    <div class="text-sm text-green-700">
+                        <p><strong>Nome:</strong> <span x-text="existingClient.name"></span></p>
+                        <p><strong>Telefone:</strong> <span x-text="existingClient.contact"></span></p>
+                        <p><strong>Endereço:</strong> <span x-text="existingClient.adress_1"></span></p>
+                    </div>
+                    <button @click="useExistingClient" 
+                            class="mt-2 w-full bg-green-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
+                        Usar Dados Existentes
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulário de Dados do Cliente -->
+        <div x-show="!existingClient || showNewClientForm" class="bg-white rounded-xl shadow-neumorphism p-4 mb-4">
+            <h2 class="font-semibold text-gray-800 mb-3">Dados para Entrega</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
+                        Nome Completo *
+                    </label>
+                    <input 
+                        type="text" 
+                        id="name" 
+                        x-model="form.name"
+                        class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                        placeholder="Seu nome completo"
+                        required
+                    >
+                </div>
+
+                <div>
+                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">
+                        Telefone *
+                    </label>
+                    <input 
+                        type="tel" 
+                        id="phone" 
+                        x-model="form.phone"
+                        @input="formatPhone"
+                        class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                        placeholder="(11) 99999-9999"
+                        required
+                    >
+                </div>
+
+                <div>
+                    <label for="cpf" class="block text-sm font-medium text-gray-700 mb-2">
+                        CPF *
+                    </label>
+                    <input 
+                        type="text" 
+                        id="cpf" 
+                        x-model="form.cpf"
+                        @input="formatCPF"
+                        class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                        placeholder="000.000.000-00"
+                        required
+                    >
+                </div>
+
+                <div>
+                    <label for="address" class="block text-sm font-medium text-gray-700 mb-2">
+                        Endereço Completo *
+                    </label>
+                    <textarea 
+                        id="address" 
+                        x-model="form.address"
+                        rows="3"
+                        class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300 resize-none"
+                        placeholder="Rua, número, bairro, cidade, estado, CEP"
+                        required
+                    ></textarea>
+                </div>
+
+                <div>
+                    <label for="address2" class="block text-sm font-medium text-gray-700 mb-2">
+                        Complemento
+                    </label>
+                    <input 
+                        type="text" 
+                        id="address2" 
+                        x-model="form.address2"
+                        class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                        placeholder="Apartamento, bloco, referência..."
+                    >
+                </div>
+            </div>
+        </div>
+
+        <!-- Botão de Continuar -->
+        <button @click="proceedToConfirmation" 
+                :disabled="!isFormValid"
+                class="w-full bg-primary text-white py-4 px-4 rounded-lg font-medium hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+            Continuar para Confirmação
+        </button>
+    </div>
+
+    <!-- Mensagens de Erro/Sucesso -->
+    <div x-show="message" x-transition class="fixed top-4 left-4 right-4 z-50">
+        <div class="max-w-md mx-auto p-3 rounded-lg" :class="messageType === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'">
+            <span x-text="message"></span>
+        </div>
+    </div>
+</div>
+
+<script>
+function checkoutForm() {
+    return {
+        cartItems: [],
+        companyId: '',
+        existingClient: null,
+        showNewClientForm: false,
+        message: '',
+        messageType: 'error',
+        form: {
+            email: '',
+            name: '',
+            phone: '',
+            cpf: '',
+            address: '',
+            address2: ''
+        },
+
+        async init() {
+            // Carregar dados do carrinho
+            const cartData = sessionStorage.getItem('delivery_cart');
+            const companyId = sessionStorage.getItem('delivery_company_id');
+            
+            if (!cartData || !companyId) {
+                this.message = 'Erro: Carrinho não encontrado';
+                this.messageType = 'error';
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+                return;
+            }
+
+            this.cartItems = JSON.parse(cartData);
+            this.companyId = companyId;
+        },
+
+        async checkExistingClient() {
+            if (!this.form.email) return;
+
+            try {
+                const response = await fetch(`/api/client/check`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email: this.form.email })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.client) {
+                    this.existingClient = data.client;
+                    this.showNewClientForm = false;
+                } else {
+                    this.existingClient = null;
+                    this.showNewClientForm = true;
+                }
+            } catch (error) {
+                console.error('Erro ao verificar cliente:', error);
+                this.existingClient = null;
+                this.showNewClientForm = true;
+            }
+        },
+
+        useExistingClient() {
+            this.form.name = this.existingClient.name;
+            this.form.phone = this.existingClient.contact;
+            this.form.cpf = this.existingClient.cpf_cnpj;
+            this.form.address = this.existingClient.adress_1;
+            this.form.address2 = this.existingClient.adres_2 || '';
+            this.showNewClientForm = false;
+        },
+
+        formatPhone(event) {
+            let value = event.target.value.replace(/\D/g, '');
+            if (value.length <= 10) {
+                value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+                value = value.replace(/(\d{4})(\d)/, '$1-$2');
+            } else {
+                value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+                value = value.replace(/(\d{5})(\d)/, '$1-$2');
+            }
+            this.form.phone = value;
+        },
+
+        formatCPF(event) {
+            let value = event.target.value.replace(/\D/g, '');
+            value = value.replace(/^(\d{3})(\d)/, '$1.$2');
+            value = value.replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3');
+            value = value.replace(/\.(\d{3})(\d)/, '.$1-$2');
+            this.form.cpf = value;
+        },
+
+        getTotalPrice() {
+            return this.cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+        },
+
+        get isFormValid() {
+            return this.form.email && 
+                   this.form.name && 
+                   this.form.phone && 
+                   this.form.cpf && 
+                   this.form.address;
+        },
+
+        proceedToConfirmation() {
+            if (!this.isFormValid) {
+                this.message = 'Por favor, preencha todos os campos obrigatórios';
+                this.messageType = 'error';
+                return;
+            }
+
+            // Salvar dados do cliente
+            sessionStorage.setItem('delivery_client', JSON.stringify(this.form));
+            
+            // Redirecionar para confirmação
+            window.location.href = `/delivery/${this.companyId}/confirmation`;
+        },
+
+        goBack() {
+            window.location.href = `/delivery/${this.companyId}/menu`;
+        }
+    }
+}
+</script>
+{% endblock %}

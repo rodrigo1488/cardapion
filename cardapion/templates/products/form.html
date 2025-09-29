@@ -1,0 +1,327 @@
+{% extends "base_dashboard.html" %}
+
+{% block page_title %}{{ 'Editar' if product_id else 'Novo' }} Produto{% endblock %}
+{% block header_title %}{{ 'Editar' if product_id else 'Novo' }} Produto{% endblock %}
+
+{% block main_content %}
+<div class="max-w-2xl mx-auto" x-data="productForm()">
+    <!-- Header -->
+    <div class="flex items-center space-x-3 mb-6">
+        <button @click="goBack" class="text-gray-600 hover:text-gray-800">
+            <i class="fas fa-arrow-left text-xl"></i>
+        </button>
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">
+                {{ 'Editar' if product_id else 'Novo' }} Produto
+            </h1>
+            <p class="text-gray-600 mt-1">
+                {{ 'Atualize as informações do produto' if product_id else 'Adicione um novo produto ao seu cardápio' }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Formulário -->
+    <div class="bg-white shadow-neumorphism rounded-xl p-6">
+        <form @submit.prevent="saveProduct" class="space-y-6">
+            <!-- Nome do Produto -->
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
+                    Nome do Produto *
+                </label>
+                <input 
+                    type="text" 
+                    id="name" 
+                    x-model="form.name"
+                    class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                    placeholder="Ex: Pizza Margherita, Coca-Cola 350ml"
+                    required
+                >
+            </div>
+
+            <!-- Categoria -->
+            <div>
+                <label for="category" class="block text-sm font-medium text-gray-700 mb-2">
+                    Categoria *
+                </label>
+                <select 
+                    id="category" 
+                    x-model="form.id_categorie"
+                    class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                    required
+                >
+                    <option value="">Selecione uma categoria</option>
+                    <template x-for="category in categories" :key="category.id">
+                        <option :value="category.id" x-text="category.name"></option>
+                    </template>
+                </select>
+                <p class="text-sm text-gray-500 mt-1">
+                    <a href="/categories/new" target="_blank" class="text-primary hover:text-primary-hover">
+                        <i class="fas fa-plus mr-1"></i>
+                        Criar nova categoria
+                    </a>
+                </p>
+            </div>
+
+            <!-- Preço -->
+            <div>
+                <label for="price" class="block text-sm font-medium text-gray-700 mb-2">
+                    Preço (R$) *
+                </label>
+                <div class="relative">
+                    <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">R$</span>
+                    <input 
+                        type="number" 
+                        id="price" 
+                        x-model="form.price"
+                        step="0.01"
+                        min="0"
+                        class="w-full pl-10 pr-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                        placeholder="0,00"
+                        required
+                    >
+                </div>
+            </div>
+
+            <!-- Tempo de Preparo -->
+            <div>
+                <label for="preparation_time" class="block text-sm font-medium text-gray-700 mb-2">
+                    Tempo de Preparo
+                </label>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">Minutos</label>
+                        <input 
+                            type="number" 
+                            x-model="preparationMinutes"
+                            min="0"
+                            max="59"
+                            class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">Segundos</label>
+                        <input 
+                            type="number" 
+                            x-model="preparationSeconds"
+                            min="0"
+                            max="59"
+                            class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                        >
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500 mt-1">Tempo estimado para preparo do produto</p>
+            </div>
+
+            <!-- Descrição -->
+            <div>
+                <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+                    Descrição
+                </label>
+                <textarea 
+                    id="description" 
+                    x-model="form.description"
+                    rows="3"
+                    class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300 resize-none"
+                    placeholder="Descreva os ingredientes e características do produto..."
+                ></textarea>
+                <p class="text-sm text-gray-500 mt-1">Descrição que aparecerá no cardápio</p>
+            </div>
+
+            <!-- Informações Adicionais -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-start space-x-3">
+                    <i class="fas fa-info-circle text-blue-600 mt-1"></i>
+                    <div class="text-sm text-blue-700">
+                        <p class="font-medium mb-1">Dicas para um bom produto:</p>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>Use nomes claros e atrativos</li>
+                            <li>Descreva os ingredientes principais</li>
+                            <li>Defina um tempo de preparo realista</li>
+                            <li>Organize por categorias lógicas</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botões -->
+            <div class="flex flex-col sm:flex-row gap-4 pt-6">
+                <button 
+                    type="button" 
+                    @click="goBack"
+                    class="flex-1 bg-gray-200 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-300"
+                >
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Voltar
+                </button>
+                
+                <button 
+                    type="submit" 
+                    :disabled="loading || !isFormValid"
+                    class="flex-1 bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <span x-show="!loading">
+                        <i class="fas fa-save mr-2"></i>
+                        {{ 'Atualizar' if product_id else 'Criar' }} Produto
+                    </span>
+                    <span x-show="loading" class="flex items-center justify-center">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>
+                        Salvando...
+                    </span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Mensagens de feedback -->
+    <div x-show="message" x-transition class="fixed top-4 right-4 z-50">
+        <div class="max-w-md p-3 rounded-lg" :class="messageType === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'">
+            <span x-text="message"></span>
+        </div>
+    </div>
+</div>
+
+<script>
+function productForm() {
+    return {
+        productId: '{{ product_id or "" }}',
+        categories: [],
+        form: {
+            name: '',
+            price: '',
+            description: '',
+            id_categorie: '',
+            preparation_time: '00:15:00'
+        },
+        preparationMinutes: 15,
+        preparationSeconds: 0,
+        loading: false,
+        message: '',
+        messageType: 'error',
+
+        get isFormValid() {
+            return this.form.name.trim().length > 0 && 
+                   this.form.price && 
+                   this.form.id_categorie;
+        },
+
+        async init() {
+            await this.loadCategories();
+            if (this.productId) {
+                await this.loadProduct();
+            }
+        },
+
+        async loadCategories() {
+            try {
+                const response = await fetch('/api/categories');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    this.categories = data.categories || [];
+                }
+            } catch (error) {
+                console.error('Erro ao carregar categorias:', error);
+            }
+        },
+
+        async loadProduct() {
+            try {
+                const response = await fetch(`/api/products/${this.productId}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    this.form = {
+                        name: data.product.name,
+                        price: (data.product.price / 100).toFixed(2),
+                        description: data.product.description || '',
+                        id_categorie: data.product.id_categorie,
+                        preparation_time: data.product.preparation_time
+                    };
+                    
+                    // Parse preparation time
+                    const timeParts = data.product.preparation_time.split(':');
+                    this.preparationMinutes = parseInt(timeParts[1]) || 0;
+                    this.preparationSeconds = parseInt(timeParts[2]) || 0;
+                } else {
+                    this.showMessage('Erro ao carregar produto', 'error');
+                    setTimeout(() => {
+                        this.goBack();
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Erro ao carregar produto:', error);
+                this.showMessage('Erro de conexão', 'error');
+                setTimeout(() => {
+                    this.goBack();
+                }, 2000);
+            }
+        },
+
+        get preparationTime() {
+            const hours = Math.floor(this.preparationMinutes / 60);
+            const minutes = this.preparationMinutes % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${this.preparationSeconds.toString().padStart(2, '0')}`;
+        },
+
+        async saveProduct() {
+            if (!this.isFormValid) {
+                this.showMessage('Por favor, preencha todos os campos obrigatórios', 'error');
+                return;
+            }
+
+            this.loading = true;
+            this.message = '';
+
+            try {
+                const productData = {
+                    ...this.form,
+                    preparation_time: this.preparationTime
+                };
+
+                const url = this.productId ? `/api/products/${this.productId}` : '/api/products';
+                const method = this.productId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(productData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    this.showMessage(
+                        this.productId ? 'Produto atualizado com sucesso!' : 'Produto criado com sucesso!', 
+                        'success'
+                    );
+                    setTimeout(() => {
+                        this.goBack();
+                    }, 1500);
+                } else {
+                    this.showMessage(data.error || 'Erro ao salvar produto', 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao salvar produto:', error);
+                this.showMessage('Erro de conexão. Tente novamente.', 'error');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        goBack() {
+            window.location.href = '/products';
+        },
+
+        showMessage(text, type) {
+            this.message = text;
+            this.messageType = type;
+            setTimeout(() => {
+                this.message = '';
+            }, 5000);
+        }
+    }
+}
+</script>
+{% endblock %}

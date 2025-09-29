@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastro de Empresa - Cardápio Digital{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="bg-white shadow-neumorphism rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                <i class="fas fa-building text-3xl text-primary"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800">Cadastro de Empresa</h1>
+            <p class="text-gray-600 mt-2">Preencha os dados da sua empresa</p>
+        </div>
+
+        <!-- Formulário de Cadastro da Empresa -->
+        <div class="bg-white shadow-neumorphism rounded-xl p-8" x-data="companyForm()">
+            <form @submit.prevent="handleSubmit" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Nome da Empresa -->
+                    <div class="md:col-span-2">
+                        <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
+                            Nome da Empresa *
+                        </label>
+                        <input 
+                            type="text" 
+                            id="name" 
+                            x-model="form.name"
+                            class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                            placeholder="Nome da sua empresa"
+                            required
+                        >
+                    </div>
+
+                    <!-- CNPJ -->
+                    <div>
+                        <label for="cnpj" class="block text-sm font-medium text-gray-700 mb-2">
+                            CNPJ *
+                        </label>
+                        <input 
+                            type="text" 
+                            id="cnpj" 
+                            x-model="form.cnpj"
+                            @input="formatCNPJ"
+                            class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                            placeholder="00.000.000/0000-00"
+                            maxlength="18"
+                            required
+                        >
+                    </div>
+
+                    <!-- Email -->
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                            Email *
+                        </label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            x-model="form.email"
+                            class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                            placeholder="empresa@email.com"
+                            required
+                        >
+                    </div>
+
+                    <!-- Telefone -->
+                    <div>
+                        <label for="contact" class="block text-sm font-medium text-gray-700 mb-2">
+                            Telefone *
+                        </label>
+                        <input 
+                            type="tel" 
+                            id="contact" 
+                            x-model="form.contact"
+                            @input="formatPhone"
+                            class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300"
+                            placeholder="(11) 99999-9999"
+                            maxlength="15"
+                            required
+                        >
+                    </div>
+
+                    <!-- Endereço -->
+                    <div class="md:col-span-2">
+                        <label for="address" class="block text-sm font-medium text-gray-700 mb-2">
+                            Endereço Completo *
+                        </label>
+                        <textarea 
+                            id="address" 
+                            x-model="form.address"
+                            rows="3"
+                            class="w-full px-4 py-3 bg-white shadow-neumorphism rounded-lg border-0 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-300 resize-none"
+                            placeholder="Rua, número, bairro, cidade, estado, CEP"
+                            required
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- Botões -->
+                <div class="flex flex-col sm:flex-row gap-4 pt-6">
+                    <button 
+                        type="button" 
+                        @click="goBack"
+                        class="flex-1 bg-gray-200 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-300"
+                    >
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Voltar
+                    </button>
+                    
+                    <button 
+                        type="submit" 
+                        :disabled="loading"
+                        class="flex-1 bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    >
+                        <span x-show="!loading">Cadastrar Empresa</span>
+                        <span x-show="loading" class="flex items-center justify-center">
+                            <i class="fas fa-spinner fa-spin mr-2"></i>
+                            Cadastrando...
+                        </span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Mensagens de Erro/Sucesso -->
+            <div x-show="message" x-transition class="mt-4 p-3 rounded-lg" :class="messageType === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'">
+                <span x-text="message"></span>
+            </div>
+        </div>
+
+        <!-- Informações Adicionais -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-start">
+                <i class="fas fa-info-circle text-blue-500 mt-1 mr-3"></i>
+                <div class="text-sm text-blue-700">
+                    <p class="font-medium mb-1">Informações importantes:</p>
+                    <ul class="list-disc list-inside space-y-1">
+                        <li>Após o cadastro da empresa, você será redirecionado para criar o primeiro usuário administrador</li>
+                        <li>Certifique-se de que todos os dados estão corretos</li>
+                        <li>O CNPJ deve ser válido e único no sistema</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function companyForm() {
+    return {
+        form: {
+            name: '',
+            cnpj: '',
+            email: '',
+            contact: '',
+            address: ''
+        },
+        loading: false,
+        message: '',
+        messageType: 'error',
+
+        formatCNPJ(event) {
+            let value = event.target.value.replace(/\D/g, '');
+            value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+            value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+            value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+            value = value.replace(/(\d{4})(\d)/, '$1-$2');
+            this.form.cnpj = value;
+        },
+
+        formatPhone(event) {
+            let value = event.target.value.replace(/\D/g, '');
+            if (value.length <= 10) {
+                value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+                value = value.replace(/(\d{4})(\d)/, '$1-$2');
+            } else {
+                value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+                value = value.replace(/(\d{5})(\d)/, '$1-$2');
+            }
+            this.form.contact = value;
+        },
+
+        async handleSubmit() {
+            this.loading = true;
+            this.message = '';
+
+            try {
+                // Remove formatação para envio
+                const dataToSend = {
+                    ...this.form,
+                    cnpj: this.form.cnpj.replace(/\D/g, ''),
+                    contact: this.form.contact.replace(/\D/g, '')
+                };
+
+                const response = await fetch('/register/company', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(dataToSend)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    this.message = 'Empresa cadastrada com sucesso! Redirecionando...';
+                    this.messageType = 'success';
+                    setTimeout(() => {
+                        // Armazenar ID da empresa para o próximo passo
+                        sessionStorage.setItem('company_id', data.company_id);
+                        window.location.href = '/register/user';
+                    }, 1500);
+                } else {
+                    this.message = data.error || 'Erro ao cadastrar empresa';
+                    this.messageType = 'error';
+                }
+            } catch (error) {
+                this.message = 'Erro de conexão. Tente novamente.';
+                this.messageType = 'error';
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        goBack() {
+            window.location.href = '/login';
+        }
+    }
+}
+</script>
+{% endblock %}

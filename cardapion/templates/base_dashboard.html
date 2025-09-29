@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}{% block page_title %}Dashboard{% endblock %} - Cardápio Digital{% endblock %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100" x-data="dashboardLayout()">
+    <!-- Sidebar -->
+    {% include 'components/sidebar.html' %}
+
+    <!-- Conteúdo Principal -->
+    <div class="flex-1 flex flex-col overflow-hidden lg:ml-0">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-4 lg:px-6">
+            <div class="flex items-center">
+                <button @click="sidebarOpen = true" class="lg:hidden text-gray-500 hover:text-gray-700 mr-4">
+                    <i class="fas fa-bars text-lg"></i>
+                </button>
+                <h1 class="text-xl font-semibold text-gray-800">{% block header_title %}Dashboard{% endblock %}</h1>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <!-- Notificações -->
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open" class="relative p-2 text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary rounded-lg">
+                        <i class="fas fa-bell text-lg"></i>
+                        <span class="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400 ring-2 ring-white"></span>
+                    </button>
+                    
+                    <!-- Dropdown de Notificações -->
+                    <div x-show="open" 
+                         x-transition:enter="transition ease-out duration-100"
+                         x-transition:enter-start="transform opacity-0 scale-95"
+                         x-transition:enter-end="transform opacity-100 scale-100"
+                         x-transition:leave="transition ease-in duration-75"
+                         x-transition:leave-start="transform opacity-100 scale-100"
+                         x-transition:leave-end="transform opacity-0 scale-95"
+                         @click.away="open = false"
+                         class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                        <div class="p-4 border-b border-gray-200">
+                            <h3 class="text-sm font-medium text-gray-800">Notificações</h3>
+                        </div>
+                        <div class="max-h-64 overflow-y-auto">
+                            <div class="p-3 border-b border-gray-100 hover:bg-gray-50">
+                                <p class="text-sm text-gray-800">Novo pedido #1234</p>
+                                <p class="text-xs text-gray-500">Há 5 minutos</p>
+                            </div>
+                            <div class="p-3 border-b border-gray-100 hover:bg-gray-50">
+                                <p class="text-sm text-gray-800">Mesa 5 solicitou o garçom</p>
+                                <p class="text-xs text-gray-500">Há 10 minutos</p>
+                            </div>
+                        </div>
+                        <div class="p-3 border-t border-gray-200">
+                            <a href="/notifications" class="text-sm text-primary hover:text-primary-hover">Ver todas</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Perfil do Usuário -->
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open" class="flex items-center space-x-2 p-2 text-gray-700 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                        <div class="bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center">
+                            <i class="fas fa-user text-sm text-gray-600"></i>
+                        </div>
+                        <span class="hidden md:block text-sm font-medium">João Silva</span>
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </button>
+                    
+                    <!-- Dropdown do Perfil -->
+                    <div x-show="open" 
+                         x-transition:enter="transition ease-out duration-100"
+                         x-transition:enter-start="transform opacity-0 scale-95"
+                         x-transition:enter-end="transform opacity-100 scale-100"
+                         x-transition:leave="transition ease-in duration-75"
+                         x-transition:leave-start="transform opacity-100 scale-100"
+                         x-transition:leave-end="transform opacity-0 scale-95"
+                         @click.away="open = false"
+                         class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                        <div class="py-1">
+                            <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-user mr-2"></i>Perfil
+                            </a>
+                            <a href="/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-cog mr-2"></i>Configurações
+                            </a>
+                            <hr class="my-1">
+                            <a href="/logout" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                <i class="fas fa-sign-out-alt mr-2"></i>Sair
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Conteúdo da Página -->
+        <main class="flex-1 overflow-y-auto p-4 lg:p-6">
+            {% block main_content %}
+            <!-- Conteúdo será inserido aqui pelas páginas filhas -->
+            {% endblock %}
+        </main>
+    </div>
+</div>
+
+<script>
+function dashboardLayout() {
+    return {
+        sidebarOpen: false,
+
+        init() {
+            // Fechar sidebar em telas grandes por padrão
+            if (window.innerWidth >= 1024) {
+                this.sidebarOpen = false;
+            }
+        }
+    }
+}
+</script>
+{% endblock %}
