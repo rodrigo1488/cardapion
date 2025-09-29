@@ -8,7 +8,7 @@
     {% include 'components/sidebar.html' %}
 
     <!-- Conteúdo Principal -->
-    <div class="flex-1 flex flex-col overflow-hidden lg:ml-0">
+    <div class="flex-1 flex flex-col overflow-hidden lg:ml-64">
         <!-- Header -->
         <header class="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-4 lg:px-6">
             <div class="flex items-center">
@@ -104,12 +104,23 @@
 <script>
 function dashboardLayout() {
     return {
-        sidebarOpen: false,
+        sidebarOpen: window.innerWidth >= 1024, // Aberto por padrão em desktop
 
         init() {
-            // Fechar sidebar em telas grandes por padrão
+            // Sincronizar com o estado do sidebar
+            this.updateSidebarState();
+            
+            // Escutar mudanças no tamanho da tela
+            window.addEventListener('resize', () => {
+                this.updateSidebarState();
+            });
+        },
+
+        updateSidebarState() {
             if (window.innerWidth >= 1024) {
-                this.sidebarOpen = false;
+                this.sidebarOpen = true; // Sempre aberto em desktop
+            } else {
+                this.sidebarOpen = false; // Fechado em mobile por padrão
             }
         }
     }
