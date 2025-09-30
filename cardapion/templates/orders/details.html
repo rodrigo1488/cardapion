@@ -1,0 +1,322 @@
+{% extends "base_dashboard.html" %}
+
+{% block page_title %}Detalhes do Pedido{% endblock %}
+{% block header_title %}Detalhes do Pedido{% endblock %}
+
+{% block main_content %}
+<div class="space-y-6" x-data="orderDetailsPage()">
+    <!-- Informações do Pedido -->
+    <div class="bg-white shadow-neumorphism rounded-xl p-6">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">Pedido #<span x-text="order?.id?.substring(0, 8) || 'Carregando...'"></span></h3>
+                <p class="text-sm text-gray-600" x-text="formatTime(order?.created_at)"></p>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <span class="px-3 py-1 text-sm font-medium rounded-full" 
+                      :class="getStatusClass(order?.status)" 
+                      x-text="getStatusText(order?.status)"></span>
+                
+                <span class="px-3 py-1 text-sm font-medium rounded-full" 
+                      :class="getTypeClass(order?.is_delivery)" 
+                      x-text="order?.is_delivery ? 'Delivery' : 'Mesa'"></span>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div x-show="loading" class="text-center py-8">
+            <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
+            <p class="text-gray-500 mt-2">Carregando detalhes do pedido...</p>
+        </div>
+
+        <!-- Conteúdo do Pedido -->
+        <div x-show="!loading && order" class="space-y-6">
+            <!-- Informações do Cliente/Mesa -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="text-md font-semibold text-gray-900 mb-3">
+                        <template x-if="order.is_delivery">
+                            <span>Informações do Cliente</span>
+                        </template>
+                        <template x-if="!order.is_delivery">
+                            <span>Informações da Mesa</span>
+                        </template>
+                    </h4>
+                    
+                    <template x-if="order.is_delivery">
+                        <div class="space-y-2">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-user text-gray-400 text-sm"></i>
+                                <span class="text-sm text-gray-900" x-text="order.delivery?.client?.name || 'Nome não informado'"></span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-phone text-gray-400 text-sm"></i>
+                                <span class="text-sm text-gray-900" x-text="order.delivery?.client?.phone || 'Telefone não informado'"></span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-envelope text-gray-400 text-sm"></i>
+                                <span class="text-sm text-gray-900" x-text="order.delivery?.client?.email || 'Email não informado'"></span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-map-marker-alt text-gray-400 text-sm"></i>
+                                <span class="text-sm text-gray-900" x-text="order.delivery?.client?.address || 'Endereço não informado'"></span>
+                            </div>
+                            <template x-if="order.delivery?.client?.address2">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-map-marker-alt text-gray-400 text-sm"></i>
+                                    <span class="text-sm text-gray-900" x-text="order.delivery.client.address2"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    
+                    <template x-if="!order.is_delivery">
+                        <div class="space-y-2">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-chair text-gray-400 text-sm"></i>
+                                <span class="text-sm text-gray-900">Mesa #<span x-text="order.table_number || 'N/A'"></span></span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                
+                <div>
+                    <h4 class="text-md font-semibold text-gray-900 mb-3">Resumo do Pedido</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">Subtotal:</span>
+                            <span class="text-sm text-gray-900" x-text="formatPrice(order.value)"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">Taxa de entrega:</span>
+                            <span class="text-sm text-gray-900">R$ 0,00</span>
+                        </div>
+                        <div class="flex justify-between border-t pt-2">
+                            <span class="text-md font-semibold text-gray-900">Total:</span>
+                            <span class="text-md font-bold text-gray-900" x-text="formatPrice(order.value)"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Itens do Pedido -->
+            <div>
+                <h4 class="text-md font-semibold text-gray-900 mb-3">Itens do Pedido</h4>
+                <div class="space-y-3">
+                    <template x-for="item in order.items" :key="item.id">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div class="flex-1">
+                                <h5 class="text-sm font-medium text-gray-900" x-text="item.name"></h5>
+                                <p class="text-xs text-gray-600">Quantidade: 1</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm font-semibold text-gray-900" x-text="formatPrice(item.price)"></p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Ações -->
+            <div class="flex space-x-3 pt-4 border-t">
+                <template x-if="order.status === 'recebido'">
+                    <button @click="updateOrderStatus('preparando')" 
+                            class="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors">
+                        <i class="fas fa-play mr-2"></i>
+                        Iniciar Preparo
+                    </button>
+                </template>
+                
+                <template x-if="order.status === 'preparando'">
+                    <button @click="updateOrderStatus('pronto')" 
+                            class="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors">
+                        <i class="fas fa-check mr-2"></i>
+                        Marcar como Pronto
+                    </button>
+                </template>
+                
+                <template x-if="order.status === 'pronto' && order.is_delivery">
+                    <button @click="updateOrderStatus('saiu_para_entrega')" 
+                            class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors">
+                        <i class="fas fa-truck mr-2"></i>
+                        Saiu para Entrega
+                    </button>
+                </template>
+                
+                <template x-if="order.status === 'saiu_para_entrega'">
+                    <button @click="finishOrder()" 
+                            class="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        Finalizar Pedido
+                    </button>
+                </template>
+                
+                <template x-if="order.status === 'pronto' && !order.is_delivery">
+                    <button @click="finishOrder()" 
+                            class="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        Entregar na Mesa
+                    </button>
+                </template>
+                
+                <button @click="goBack()" 
+                        class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Voltar
+                </button>
+            </div>
+        </div>
+
+        <!-- Erro -->
+        <div x-show="!loading && !order" class="text-center py-8">
+            <i class="fas fa-exclamation-triangle text-4xl text-red-300"></i>
+            <p class="text-red-500 mt-2">Pedido não encontrado</p>
+            <button @click="goBack()" class="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                Voltar
+            </button>
+        </div>
+    </div>
+
+    <!-- Mensagens de Sucesso/Erro -->
+    <div x-show="message" x-transition class="fixed top-4 right-4 z-50">
+        <div class="max-w-md p-3 rounded-lg" :class="messageType === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'">
+            <span x-text="message"></span>
+        </div>
+    </div>
+</div>
+
+<script>
+function orderDetailsPage() {
+    return {
+        order: null,
+        loading: true,
+        message: '',
+        messageType: 'success',
+
+        async init() {
+            await this.loadOrderDetails();
+        },
+
+        async loadOrderDetails() {
+            this.loading = true;
+            try {
+                const orderId = '{{ order_id }}';
+                const response = await fetch(`/api/orders/${orderId}/track`);
+                const data = await response.json();
+                
+                if (data.order) {
+                    this.order = data.order;
+                } else {
+                    this.showMessage('Pedido não encontrado', 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar detalhes do pedido:', error);
+                this.showMessage('Erro ao carregar detalhes do pedido', 'error');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async updateOrderStatus(newStatus) {
+            try {
+                const orderId = '{{ order_id }}';
+                const response = await fetch(`/api/orders/${orderId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                if (response.ok) {
+                    this.showMessage('Status atualizado com sucesso', 'success');
+                    await this.loadOrderDetails();
+                } else {
+                    this.showMessage('Erro ao atualizar status', 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao atualizar status:', error);
+                this.showMessage('Erro ao atualizar status', 'error');
+            }
+        },
+
+        async finishOrder() {
+            try {
+                const orderId = '{{ order_id }}';
+                const response = await fetch(`/api/orders/${orderId}/finish`, {
+                    method: 'PUT'
+                });
+                
+                if (response.ok) {
+                    this.showMessage('Pedido finalizado com sucesso', 'success');
+                    await this.loadOrderDetails();
+                } else {
+                    this.showMessage('Erro ao finalizar pedido', 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao finalizar pedido:', error);
+                this.showMessage('Erro ao finalizar pedido', 'error');
+            }
+        },
+
+        goBack() {
+            window.history.back();
+        },
+
+        getStatusClass(status) {
+            const classes = {
+                'recebido': 'bg-yellow-100 text-yellow-800',
+                'preparando': 'bg-orange-100 text-orange-800',
+                'pronto': 'bg-green-100 text-green-800',
+                'saiu_para_entrega': 'bg-blue-100 text-blue-800',
+                'entregue': 'bg-gray-100 text-gray-800'
+            };
+            return classes[status] || 'bg-gray-100 text-gray-800';
+        },
+
+        getStatusText(status) {
+            const texts = {
+                'recebido': 'Recebido',
+                'preparando': 'Preparando',
+                'pronto': 'Pronto',
+                'saiu_para_entrega': 'Saiu para Entrega',
+                'entregue': 'Entregue'
+            };
+            return texts[status] || status;
+        },
+
+        getTypeClass(isDelivery) {
+            return isDelivery ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800';
+        },
+
+        formatPrice(price) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(price / 100);
+        },
+
+        formatTime(dateString) {
+            if (!dateString) return 'Data não disponível';
+            const date = new Date(dateString);
+            return date.toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        },
+
+        showMessage(text, type = 'success') {
+            this.message = text;
+            this.messageType = type;
+            setTimeout(() => {
+                this.message = '';
+            }, 3000);
+        }
+    }
+}
+</script>
+{% endblock %}

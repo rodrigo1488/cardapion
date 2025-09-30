@@ -4,7 +4,7 @@
 {% block header_title %}Configurações{% endblock %}
 
 {% block main_content %}
-<div class="space-y-6">
+<div class="space-y-6" x-data="settingsPage()">
     <!-- URL de Acesso para Delivery -->
     <div class="bg-white shadow-neumorphism rounded-xl p-6">
         <div class="flex items-center space-x-3 mb-4">
@@ -277,7 +277,7 @@ function settingsPage() {
         messageType: 'error',
 
         async init() {
-            this.deliveryUrl = `http://192.168.2.110:5000/delivery/${this.getCompanyId()}/menu`;
+            this.deliveryUrl = `http://127.0.0.1:5000/delivery/${this.getCompanyId()}/menu`;
             await this.loadCompanyData();
             await this.loadPaymentMethods();
         },

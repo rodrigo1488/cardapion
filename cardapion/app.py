@@ -14,6 +14,7 @@ def register_blueprints():
     from routes.delivery import delivery_bp
     from routes.categories import categories_bp
     from routes.products import products_bp
+    from routes.orders import orders_bp
 
     app.register_blueprint(company_bp)
     app.register_blueprint(users_bp)
@@ -21,6 +22,7 @@ def register_blueprints():
     app.register_blueprint(delivery_bp)
     app.register_blueprint(categories_bp)
     app.register_blueprint(products_bp)
+    app.register_blueprint(orders_bp)
 
 
 

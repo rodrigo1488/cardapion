@@ -171,6 +171,7 @@
             <span x-text="message"></span>
         </div>
     </div>
+
 </div>
 
 <script>
@@ -208,6 +209,7 @@ function checkoutForm() {
             this.cartItems = JSON.parse(cartData);
             this.companyId = companyId;
         },
+
 
         async checkExistingClient() {
             if (!this.form.email) return;

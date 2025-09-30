@@ -78,6 +78,14 @@ CREATE TABLE public.orders_finished (
   CONSTRAINT orders_finished_id_company_fkey FOREIGN KEY (id_company) REFERENCES public.company(id),
   CONSTRAINT orders_finished_id_order_fkey FOREIGN KEY (id_order) REFERENCES public.orders(id)
 );
+CREATE TABLE public.payment_companies (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  name text,
+  id_company uuid,
+  CONSTRAINT payment_companies_pkey PRIMARY KEY (id),
+  CONSTRAINT payment_companies_id_company_fkey FOREIGN KEY (id_company) REFERENCES public.company(id)
+);
 CREATE TABLE public.payments (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone NOT NULL DEFAULT now(),

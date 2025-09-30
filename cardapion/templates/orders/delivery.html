@@ -1,0 +1,437 @@
+{% extends "base_dashboard.html" %}
+
+{% block page_title %}Pedidos de Delivery{% endblock %}
+{% block header_title %}Pedidos de Delivery{% endblock %}
+
+{% block main_content %}
+<div class="space-y-6" x-data="deliveryOrdersPage()">
+    <!-- Filtros e Estatísticas -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Total de Pedidos -->
+        <div class="bg-white shadow-neumorphism rounded-xl p-6">
+            <div class="flex items-center">
+                <div class="bg-blue-100 rounded-lg w-12 h-12 flex items-center justify-center">
+                    <i class="fas fa-shopping-cart text-blue-600 text-lg"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Total de Pedidos</p>
+                    <p class="text-2xl font-bold text-gray-900" x-text="totalOrders"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pedidos Recebidos -->
+        <div class="bg-white shadow-neumorphism rounded-xl p-6">
+            <div class="flex items-center">
+                <div class="bg-yellow-100 rounded-lg w-12 h-12 flex items-center justify-center">
+                    <i class="fas fa-clock text-yellow-600 text-lg"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Recebidos</p>
+                    <p class="text-2xl font-bold text-gray-900" x-text="statusCounts.recebido"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pedidos Preparando -->
+        <div class="bg-white shadow-neumorphism rounded-xl p-6">
+            <div class="flex items-center">
+                <div class="bg-orange-100 rounded-lg w-12 h-12 flex items-center justify-center">
+                    <i class="fas fa-utensils text-orange-600 text-lg"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Preparando</p>
+                    <p class="text-2xl font-bold text-gray-900" x-text="statusCounts.preparando"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pedidos Prontos -->
+        <div class="bg-white shadow-neumorphism rounded-xl p-6">
+            <div class="flex items-center">
+                <div class="bg-green-100 rounded-lg w-12 h-12 flex items-center justify-center">
+                    <i class="fas fa-check-circle text-green-600 text-lg"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Prontos</p>
+                    <p class="text-2xl font-bold text-gray-900" x-text="statusCounts.pronto"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white shadow-neumorphism rounded-xl p-6">
+        <div class="flex flex-wrap gap-4 items-center">
+            <div class="flex items-center space-x-2">
+                <label class="text-sm font-medium text-gray-700">Status:</label>
+                <select x-model="statusFilter" @change="filterOrders" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                    <option value="">Todos</option>
+                    <option value="recebido">Recebido</option>
+                    <option value="preparando">Preparando</option>
+                    <option value="pronto">Pronto</option>
+                    <option value="saiu_para_entrega">Saiu para Entrega</option>
+                    <option value="entregue">Entregue</option>
+                </select>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <label class="text-sm font-medium text-gray-700">Período:</label>
+                <select x-model="periodFilter" @change="filterOrders" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                    <option value="today">Hoje</option>
+                    <option value="week">Esta Semana</option>
+                    <option value="month">Este Mês</option>
+                    <option value="all">Todos</option>
+                </select>
+            </div>
+
+            <button @click="refreshOrders" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
+                <i class="fas fa-sync-alt mr-2"></i>
+                Atualizar
+            </button>
+        </div>
+    </div>
+
+    <!-- Lista de Pedidos -->
+    <div class="bg-white shadow-neumorphism rounded-xl p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-semibold text-gray-900">Pedidos de Delivery</h3>
+            <div class="flex items-center space-x-2">
+                <span class="text-sm text-gray-500">Atualização automática a cada 30s</span>
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div x-show="loading" class="text-center py-8">
+            <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
+            <p class="text-gray-500 mt-2">Carregando pedidos...</p>
+        </div>
+
+        <!-- Lista de Pedidos -->
+        <div x-show="!loading" class="space-y-4">
+            <template x-for="order in filteredOrders" :key="order.id">
+                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <!-- Informações do Pedido -->
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-4">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm font-medium text-gray-600">Pedido #</span>
+                                    <span class="text-sm font-bold text-gray-900" x-text="order.id.substring(0, 8)"></span>
+                                </div>
+                                
+                                <div class="flex items-center space-x-2">
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full" 
+                                          :class="getStatusClass(order.status)" 
+                                          x-text="getStatusText(order.status)"></span>
+                                </div>
+                                
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-clock text-gray-400 text-sm"></i>
+                                    <span class="text-sm text-gray-600" x-text="formatTime(order.created_at)"></span>
+                                </div>
+                            </div>
+                            
+                            <!-- Cliente -->
+                            <div class="mt-2">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-user text-gray-400 text-sm"></i>
+                                    <span class="text-sm font-medium text-gray-900" x-text="order.delivery?.client?.name || 'Cliente não informado'"></span>
+                                </div>
+                                <div class="flex items-center space-x-2 mt-1">
+                                    <i class="fas fa-phone text-gray-400 text-sm"></i>
+                                    <span class="text-sm text-gray-600" x-text="order.delivery?.client?.phone || 'Telefone não informado'"></span>
+                                </div>
+                                <div class="flex items-center space-x-2 mt-1">
+                                    <i class="fas fa-map-marker-alt text-gray-400 text-sm"></i>
+                                    <span class="text-sm text-gray-600" x-text="order.delivery?.client?.address || 'Endereço não informado'"></span>
+                                </div>
+                            </div>
+                            
+                            <!-- Itens do Pedido -->
+                            <div class="mt-3">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-list text-gray-400 text-sm"></i>
+                                    <span class="text-sm font-medium text-gray-900">Itens:</span>
+                                </div>
+                                <div class="ml-6 mt-1">
+                                    <template x-for="item in order.items" :key="item.id">
+                                        <div class="flex items-center justify-between text-sm">
+                                            <span x-text="item.name"></span>
+                                            <span class="text-gray-600" x-text="formatPrice(item.price)"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Valor Total e Ações -->
+                        <div class="flex flex-col items-end space-y-3">
+                            <div class="text-right">
+                                <p class="text-sm text-gray-600">Total</p>
+                                <p class="text-lg font-bold text-gray-900" x-text="formatPrice(order.value)"></p>
+                            </div>
+                            
+                            <div class="flex space-x-2">
+                                <button @click="viewOrderDetails(order.id)" 
+                                        class="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                                    <i class="fas fa-eye mr-1"></i>
+                                    Ver
+                                </button>
+                                
+                                <template x-if="order.status === 'recebido'">
+                                    <button @click="updateOrderStatus(order.id, 'preparando')" 
+                                            class="px-3 py-1 text-xs bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors">
+                                        <i class="fas fa-play mr-1"></i>
+                                        Iniciar
+                                    </button>
+                                </template>
+                                
+                                <template x-if="order.status === 'preparando'">
+                                    <button @click="updateOrderStatus(order.id, 'pronto')" 
+                                            class="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors">
+                                        <i class="fas fa-check mr-1"></i>
+                                        Pronto
+                                    </button>
+                                </template>
+                                
+                                <template x-if="order.status === 'pronto'">
+                                    <button @click="updateOrderStatus(order.id, 'saiu_para_entrega')" 
+                                            class="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors">
+                                        <i class="fas fa-truck mr-1"></i>
+                                        Entregar
+                                    </button>
+                                </template>
+                                
+                                <template x-if="order.status === 'saiu_para_entrega'">
+                                    <button @click="finishOrder(order.id)" 
+                                            class="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors">
+                                        <i class="fas fa-check-circle mr-1"></i>
+                                        Entregue
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            
+            <!-- Mensagem quando não há pedidos -->
+            <div x-show="filteredOrders.length === 0" class="text-center py-8">
+                <i class="fas fa-shopping-cart text-4xl text-gray-300"></i>
+                <p class="text-gray-500 mt-2">Nenhum pedido de delivery encontrado</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensagens de Sucesso/Erro -->
+    <div x-show="message" x-transition class="fixed top-4 right-4 z-50">
+        <div class="max-w-md p-3 rounded-lg" :class="messageType === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'">
+            <span x-text="message"></span>
+        </div>
+    </div>
+</div>
+
+<script>
+function deliveryOrdersPage() {
+    return {
+        orders: [],
+        filteredOrders: [],
+        loading: true,
+        statusFilter: '',
+        periodFilter: 'today',
+        totalOrders: 0,
+        statusCounts: {
+            recebido: 0,
+            preparando: 0,
+            pronto: 0,
+            saiu_para_entrega: 0,
+            entregue: 0
+        },
+        message: '',
+        messageType: 'success',
+        refreshInterval: null,
+
+        async init() {
+            await this.loadOrders();
+            this.startAutoRefresh();
+        },
+
+        async loadOrders() {
+            this.loading = true;
+            try {
+                const response = await fetch(`/api/orders/delivery?company_id=${this.getCompanyId()}`);
+                const data = await response.json();
+                
+                if (data.orders) {
+                    this.orders = data.orders;
+                    this.filterOrders();
+                    this.updateStatistics();
+                }
+            } catch (error) {
+                console.error('Erro ao carregar pedidos:', error);
+                this.showMessage('Erro ao carregar pedidos', 'error');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        filterOrders() {
+            let filtered = [...this.orders];
+            
+            // Filtro por status
+            if (this.statusFilter) {
+                filtered = filtered.filter(order => order.status === this.statusFilter);
+            }
+            
+            // Filtro por período
+            if (this.periodFilter !== 'all') {
+                const now = new Date();
+                filtered = filtered.filter(order => {
+                    const orderDate = new Date(order.created_at);
+                    switch (this.periodFilter) {
+                        case 'today':
+                            return orderDate.toDateString() === now.toDateString();
+                        case 'week':
+                            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                            return orderDate >= weekAgo;
+                        case 'month':
+                            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                            return orderDate >= monthAgo;
+                        default:
+                            return true;
+                    }
+                });
+            }
+            
+            this.filteredOrders = filtered;
+        },
+
+        updateStatistics() {
+            this.totalOrders = this.orders.length;
+            this.statusCounts = {
+                recebido: 0,
+                preparando: 0,
+                pronto: 0,
+                saiu_para_entrega: 0,
+                entregue: 0
+            };
+            
+            this.orders.forEach(order => {
+                if (this.statusCounts.hasOwnProperty(order.status)) {
+                    this.statusCounts[order.status]++;
+                }
+            });
+        },
+
+        async updateOrderStatus(orderId, newStatus) {
+            try {
+                const response = await fetch(`/api/orders/${orderId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                if (response.ok) {
+                    this.showMessage('Status atualizado com sucesso', 'success');
+                    await this.loadOrders();
+                } else {
+                    this.showMessage('Erro ao atualizar status', 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao atualizar status:', error);
+                this.showMessage('Erro ao atualizar status', 'error');
+            }
+        },
+
+        async finishOrder(orderId) {
+            try {
+                const response = await fetch(`/api/orders/${orderId}/finish`, {
+                    method: 'PUT'
+                });
+                
+                if (response.ok) {
+                    this.showMessage('Pedido finalizado com sucesso', 'success');
+                    await this.loadOrders();
+                } else {
+                    this.showMessage('Erro ao finalizar pedido', 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao finalizar pedido:', error);
+                this.showMessage('Erro ao finalizar pedido', 'error');
+            }
+        },
+
+        viewOrderDetails(orderId) {
+            window.location.href = `/orders/${orderId}`;
+        },
+
+        async refreshOrders() {
+            await this.loadOrders();
+        },
+
+        startAutoRefresh() {
+            this.refreshInterval = setInterval(() => {
+                this.loadOrders();
+            }, 30000); // 30 segundos
+        },
+
+        getCompanyId() {
+            // Em produção, pegar do contexto da sessão
+            return 'dae7ef40-c4d8-4a89-9e65-db7a40a8806e';
+        },
+
+        getStatusClass(status) {
+            const classes = {
+                'recebido': 'bg-yellow-100 text-yellow-800',
+                'preparando': 'bg-orange-100 text-orange-800',
+                'pronto': 'bg-green-100 text-green-800',
+                'saiu_para_entrega': 'bg-blue-100 text-blue-800',
+                'entregue': 'bg-gray-100 text-gray-800'
+            };
+            return classes[status] || 'bg-gray-100 text-gray-800';
+        },
+
+        getStatusText(status) {
+            const texts = {
+                'recebido': 'Recebido',
+                'preparando': 'Preparando',
+                'pronto': 'Pronto',
+                'saiu_para_entrega': 'Saiu para Entrega',
+                'entregue': 'Entregue'
+            };
+            return texts[status] || status;
+        },
+
+        formatPrice(price) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(price / 100);
+        },
+
+        formatTime(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        },
+
+        showMessage(text, type = 'success') {
+            this.message = text;
+            this.messageType = type;
+            setTimeout(() => {
+                this.message = '';
+            }, 3000);
+        }
+    }
+}
+</script>
+{% endblock %}

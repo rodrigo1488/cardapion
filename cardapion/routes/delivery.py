@@ -235,56 +235,65 @@ def create_order():
             if not data.get(field):
                 return jsonify({"error": f"Campo {field} é obrigatório"}), 400
 
-        if supabase and data['company_id'] != 'test-company-id':
+        if supabase:
             try:
-                # Criar ou buscar cliente
+                # 1. Criar ou buscar cliente
                 client_data = data['client']
                 client_result = supabase.table('client').select('*').eq('email', client_data['email']).execute()
 
                 if client_result.data:
+                    # Cliente existe - atualizar dados
                     client_id = client_result.data[0]['id']
-                    # Atualizar dados do cliente
                     supabase.table('client').update({
                         'name': client_data['name'],
-                        'contact': re.sub(r'\\D', '', client_data['phone']),
-                        'cpf_cnpj': re.sub(r'\\D', '', client_data['cpf']),
+                        'contact': re.sub(r'\D', '', str(client_data['phone'])),
+                        'cpf_cnpj': re.sub(r'\D', '', str(client_data['cpf'])),
                         'adress_1': client_data['address'],
                         'adres_2': client_data.get('address2', '')
                     }).eq('id', client_id).execute()
                 else:
-                    # Criar novo cliente
+                    # Cliente não existe - criar novo
                     new_client = {
                         'name': client_data['name'],
                         'email': client_data['email'],
-                        'contact': re.sub(r'\\D', '', client_data['phone']),
-                        'cpf_cnpj': re.sub(r'\\D', '', client_data['cpf']),
+                        'contact': re.sub(r'\D', '', str(client_data['phone'])),
+                        'cpf_cnpj': re.sub(r'\D', '', str(client_data['cpf'])),
                         'adress_1': client_data['address'],
                         'adres_2': client_data.get('address2', '')
                     }
                     client_result = supabase.table('client').insert(new_client).execute()
                     client_id = client_result.data[0]['id']
 
-                # Criar registro de delivery
+                # 2. Buscar forma de pagamento
+                payment_result = supabase.table('payment_companies').select('*').eq('id', data['payment_method']).eq('id_company', data['company_id']).execute()
+                if not payment_result.data:
+                    return jsonify({"error": "Forma de pagamento não encontrada"}), 400
+                payment_id = payment_result.data[0]['id']
+
+                # 3. Criar registro de delivery
                 delivery_data = {
                     'id_client': client_id,
                     'id_company': data['company_id'],
-                    'status': 'recebido'
+                    'status': 'recebido',
+                    'id_payment': payment_id
                 }
                 delivery_result = supabase.table('delivery').insert(delivery_data).execute()
                 delivery_id = delivery_result.data[0]['id']
 
-                # Criar pedido
+                # 4. Criar pedido
                 order_data = {
                     'id_company': data['company_id'],
                     'is_delivery': True,
                     'is_table': False,
                     'value': data['total'],
-                    'id_order_delivery': delivery_id
+                    'id_order_delivery': delivery_id,
+                    'status': 'recebido'
                 }
                 order_result = supabase.table('orders').insert(order_data).execute()
                 order_id = order_result.data[0]['id']
 
-                # Adicionar produtos ao pedido
+                # 5. Adicionar produtos ao pedido
+                kitchen_products = []
                 for item in data['items']:
                     order_product_data = {
                         'id_product': item['id'],
@@ -298,32 +307,28 @@ def create_order():
                     if product_result.data:
                         category_result = supabase.table('categories_products').select('kitchen').eq('id', product_result.data[0]['id_categorie']).execute()
                         if category_result.data and category_result.data[0]['kitchen']:
-                            # Adicionar à cozinha
-                            kitchen_data = {
-                                'id_company': data['company_id'],
-                                'id_order': order_id
-                            }
-                            supabase.table('requests_kitchen').insert(kitchen_data).execute()
+                            kitchen_products.append(item['id'])
+
+                # 6. Adicionar à cozinha se houver produtos de cozinha
+                if kitchen_products:
+                    kitchen_data = {
+                        'id_company': data['company_id'],
+                        'id_order': order_id,
+                        'status': 'recebido'
+                    }
+                    supabase.table('requests_kitchen').insert(kitchen_data).execute()
 
                 return jsonify({
                     "message": "Pedido criado com sucesso",
-                    "order_id": order_id
+                    "order_id": order_id,
+                    "delivery_id": delivery_id
                 }), 201
+
             except Exception as e:
                 print(f"Erro ao criar pedido: {e}")
-                # Fallback para modo de desenvolvimento
-                order_id = str(uuid.uuid4())
-                return jsonify({
-                    "message": "Pedido criado com sucesso (modo de desenvolvimento)",
-                    "order_id": order_id
-                }), 201
+                return jsonify({"error": f"Erro ao criar pedido: {str(e)}"}), 500
         else:
-            # Modo de desenvolvimento
-            order_id = str(uuid.uuid4())
-            return jsonify({
-                "message": "Pedido criado com sucesso (modo de desenvolvimento)",
-                "order_id": order_id
-            }), 201
+            return jsonify({"error": "Banco de dados não configurado"}), 500
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -332,94 +337,74 @@ def create_order():
 @delivery_bp.route('/api/orders/<order_id>/track')
 def track_order(order_id):
     try:
-        if supabase and order_id != 'test-order-id':
-            try:
-                # Buscar pedido com dados relacionados
-                order_result = supabase.table('orders').select('*').eq('id', order_id).execute()
-                if not order_result.data:
-                    return jsonify({"error": "Pedido não encontrado"}), 404
+        if supabase:
+            # Buscar pedido com dados relacionados
+            order_result = supabase.table('orders').select('*').eq('id', order_id).execute()
+            if not order_result.data:
+                return jsonify({"error": "Pedido não encontrado"}), 404
 
-                order = order_result.data[0]
+            order = order_result.data[0]
 
-                # Buscar dados do delivery
-                delivery_result = supabase.table('delivery').select('*').eq('id', order['id_order_delivery']).execute()
-                delivery = delivery_result.data[0] if delivery_result.data else None
+            # Buscar dados do delivery
+            delivery_result = supabase.table('delivery').select('*').eq('id', order['id_order_delivery']).execute()
+            delivery = delivery_result.data[0] if delivery_result.data else None
 
-                # Buscar dados do cliente
-                client_result = supabase.table('client').select('*').eq('id', delivery['id_client']).execute()
-                client = client_result.data[0] if client_result.data else None
+            # Buscar dados do cliente
+            client_result = supabase.table('client').select('*').eq('id', delivery['id_client']).execute()
+            client = client_result.data[0] if client_result.data else None
 
-                # Buscar produtos do pedido
-                order_products_result = supabase.table('order_product').select('*').eq('id_order', order_id).execute()
-                order_products = order_products_result.data or []
+            # Buscar produtos do pedido
+            order_products_result = supabase.table('order_product').select('*').eq('id_order', order_id).execute()
+            order_products = order_products_result.data or []
 
-                # Buscar detalhes dos produtos
-                items = []
-                for op in order_products:
-                    product_result = supabase.table('products').select('*').eq('id', op['id_product']).execute()
-                    if product_result.data:
-                        product = product_result.data[0]
-                        items.append({
-                            'id': product['id'],
-                            'name': product['name'],
-                            'price': product['price'],
-                            'quantity': 1
-                        })
+            # Buscar detalhes dos produtos
+            items = []
+            for op in order_products:
+                product_result = supabase.table('products').select('*').eq('id', op['id_product']).execute()
+                if product_result.data:
+                    product = product_result.data[0]
+                    items.append({
+                        'id': product['id'],
+                        'name': product['name'],
+                        'price': product['price'],
+                        'quantity': 1
+                    })
 
-                return jsonify({
-                    "order": {
-                        "id": order['id'],
-                        "total": order['value'],
-                        "status": delivery['status'] if delivery else 'recebido',
-                        "created_at": order['created_at'],
-                        "updated_at": order.get('updated_at', order['created_at']),
-                        "client": client,
-                        "items": items
-                    }
-                })
-            except Exception as e:
-                print(f"Erro ao buscar pedido: {e}")
-                # Fallback para modo de desenvolvimento
-                return jsonify({
-                    "order": {
-                        "id": order_id,
-                        "total": 4500,
-                        "status": "preparando",
-                        "created_at": datetime.now().isoformat(),
-                        "updated_at": datetime.now().isoformat(),
-                        "client": {
-                            "name": "João Silva",
-                            "phone": "(11) 99999-9999",
-                            "address": "Rua das Flores, 123, Centro",
-                            "address2": "Apto 45"
-                        },
-                        "items": [
-                            {"id": "prod1", "name": "Pizza Margherita", "price": 3500, "quantity": 1},
-                            {"id": "prod2", "name": "Coca-Cola 350ml", "price": 500, "quantity": 2}
-                        ]
-                    }
-                })
-        else:
-            # Modo de desenvolvimento
             return jsonify({
                 "order": {
-                    "id": order_id,
-                    "total": 4500,
-                    "status": "preparando",
-                    "created_at": datetime.now().isoformat(),
-                    "updated_at": datetime.now().isoformat(),
-                    "client": {
-                        "name": "João Silva",
-                        "phone": "(11) 99999-9999",
-                        "address": "Rua das Flores, 123, Centro",
-                        "address2": "Apto 45"
-                    },
-                    "items": [
-                        {"id": "prod1", "name": "Pizza Margherita", "price": 3500, "quantity": 1},
-                        {"id": "prod2", "name": "Coca-Cola 350ml", "price": 500, "quantity": 2}
-                    ]
+                    "id": order['id'],
+                    "total": order['value'],
+                    "status": delivery['status'] if delivery else 'recebido',
+                    "created_at": order['created_at'],
+                    "updated_at": order.get('updated_at', order['created_at']),
+                    "client": client,
+                    "items": items
                 }
             })
+        else:
+            return jsonify({"error": "Banco de dados não configurado"}), 500
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# API - Verificar cliente por email
+@delivery_bp.route('/api/client/check', methods=['POST'])
+def check_client():
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({"error": "Email é obrigatório"}), 400
+        
+        if supabase:
+            result = supabase.table('client').select('*').eq('email', email).execute()
+            if result.data:
+                return jsonify({"client": result.data[0]})
+            else:
+                return jsonify({"client": None})
+        else:
+            return jsonify({"error": "Banco de dados não configurado"}), 500
             
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -428,28 +413,11 @@ def track_order(order_id):
 @delivery_bp.route('/api/company/<company_id>/payments')
 def get_company_payments(company_id):
     try:
-        if supabase and company_id != 'test-company-id':
-            try:
-                result = supabase.table('payments').select('*').eq('id_company', company_id).execute()
-                return jsonify({"payments": result.data or []})
-            except Exception as e:
-                print(f"Erro ao buscar formas de pagamento: {e}")
-                # Fallback para modo de desenvolvimento
-                return jsonify({
-                    "payments": [
-                        {"id": "pix", "name": "PIX", "icon": "fas fa-qrcode"},
-                        {"id": "dinheiro", "name": "Dinheiro", "icon": "fas fa-money-bill"},
-                        {"id": "cartao", "name": "Cartão", "icon": "fas fa-credit-card"}
-                    ]
-                })
+        if supabase:
+            result = supabase.table('payment_companies').select('*').eq('id_company', company_id).execute()
+            payments = result.data or []
+            return jsonify({"payments": payments})
         else:
-            # Modo de desenvolvimento
-            return jsonify({
-                "payments": [
-                    {"id": "pix", "name": "PIX", "icon": "fas fa-qrcode"},
-                    {"id": "dinheiro", "name": "Dinheiro", "icon": "fas fa-money-bill"},
-                    {"id": "cartao", "name": "Cartão", "icon": "fas fa-credit-card"}
-                ]
-            })
+            return jsonify({"error": "Banco de dados não configurado"}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
